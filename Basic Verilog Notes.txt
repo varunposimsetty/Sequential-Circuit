@@ -1,0 +1,396 @@
+Verilog Basics 
+1. Verilog has three styles for writing the code a) Data Flow Model b) Behavioural c) Structural 
+a) Data Flow is used when we have boolean equations i.e. combinational logic if we know the circuit (if we dont know the circuit we cant use Data Flow) 
+b) We use behavioural style for combinational circuits if we dont know the circuit to be designed (dont have boolean equations) All sequential components like Latches and FF are generally desinged using the behavioural model.
+c) Structural style is used to integrate different modules or blocks. Modules put together to form a bigger module.
+
+Data Flow 
+Half Adder 
+module HA_df(c,s,a,b);
+input a,b;
+output s,c;
+
+assign s = a^b;//assign is used for writing any data flow equation.
+assign c = a&b;//in the data flow model we have an assign statement for each output.
+
+endmodule
+
+Both sum and carry are concurrent so both sum and carry are calculated at the same time.  
+
+Behavioral model 
+module HA_bh(c,s,a,b);
+input a,b;
+output reg s,c;//reg helps us hold data
+
+always @(a,b)//(sentivity list) this always block executes when there is a change in the sensitivity list always block is triggered by a,b in this case.
+begin 
+	s = a ^ b;
+	c = a & b;
+end
+endmodule 
+
+Everything by default is a wire data type unless its stated as a reg we use reg because we need them to hold on to that value. In the above example a and b are of wire data type while s and c are reg. 
+
+Structural Code - only used to put blocks together we will never use it to build logic. This illustration below is only an example.
+
+Half Adder - it has two blocks (an XOR block and AND block) XOR and AND are primitive blocks or basic blocks in this case.
+
+module HA_st(s,c,a,b);
+input a,b;
+output s,c;
+
+xor xor1(s,a,b);
+and and1(c,a,b);
+
+endmodule
+
+Full Adder - Structural -1 (Mostly never used)
+module FA_st(c,s,a,b,cin);
+input a,b,cin;
+output c,s;
+wire N1,N2,N3,N4;
+
+xor xor1(N1,a,b);
+xor xor2(s,N1,cin);
+
+and and1(N2,a,b);
+and and2(N3,b,cin);
+and and3(N4,cin,a);
+
+or or1(c,N2,N3,N4);
+
+endmodule
+
+Full Adder - Structural -2 (Mostly used)
+if we have a half adder module as a verilog file 
+
+module FA_st2(s,c,a,b,cin);
+input a,b,cin;
+output s,c;
+wire N1,N2,N3;
+
+HA_df HA_df1(N1,N2,a,b);
+HA_df HA_df2(s,N3,N1,cin);
+
+OR or1(c,N3,N2)
+
+endmodule
+
+
+Full Adder Structural -3 
+
+module FA_st3(ss,cc,aa,bb,cin);
+input aa,bb,cin;
+output ss,cc;
+wire N1,N2,N3;
+
+HA_df HA_df1(.s(N1),.c(N2),.a(aa),.b(bb));
+HA_df HA_df2(.s(ss),.c(N3),.a(N1),.b(cin));
+
+OR or1(c,N3,N2)
+
+endmodule
+
+Full Adder Data Flow 
+
+module FA_df(s,c,a,b,cin);
+
+input a,b,cin;
+output s,c;
+
+assign s = a^b^cin;
+assign c = (a&b)|(b&c)|(c&a);
+
+endmodule 
+
+Full Adder Behavioural code 
+
+module FA_bh(s,c,a,b,cin);
+input a,b,cin;
+output reg s,c;
+
+always @(a,b,cin);   // all inputs go to sensitivity list we can just put (*) in sensitivity list 
+begin
+	s = a^b^cin;
+	c = a&b|b&cin|cin&a;
+end 
+endmodule 
+
+Basic Test Bench 
+DUT - Device under test 
+stimulti 
+A test bench is a self contained module 
+
+'timescale 1ns/100ps; 
+module FA_bh_tb;
+reg a,b,cin
+wire s,c
+
+FA_bh FA1(s,c,a,b,cin);
+
+initial //its a behavioural block it executes only once and intial block cannot be synthesised
+begin
+$monitor ("time = %d	\t a = %b	\t b = %b  \t  cin = %b \t s = %b  \t c = %b",$time,a,b,cin,s,c); //monitors any signal list given - prints the output when values change.
+
+a = 0;
+b = 0;
+cin = 0; //{a,b,cin} = 0.
+
+#10 a = 1;
+#10 b = 1;
+#10 cin = 1;
+#10 $stop;
+end 
+endmodule 
+
+4 - Valued Logic 
+
+A single wire can take one of the 4 four values 
+0 - Logic Zero, a' means a = 0, strong zero, false case , low state. 
+1 - Logic one,  a means a = 1, strong 1, true case, high state.
+X - unkown, conflict(often happens in simulation), metastability, uninitialized. 
+Z- high impedence, nothing is driven.
+
+
+A 0 might mean its  a logic zero, strong zero, false case or low state 
+A 1 might mean its a logic one, strong 1, true case or high state. 
+An X might mean the wire logic value is unknown, both zero and one are written so it has a conflict.It might also represent metastability. uninitialized 
+A Z stands for high impedence it usually occurs in tri state buffer, bi-directional ports.It means nothing is driven.
+
+Verilog has 4 values while VHDL has 9 values, but signal has sufficently be resolved with the 4 values in verilog.
+
+
+Data Types 
+Verilog has two main data types 
+wire 
+reg 
+
+Wire is the default, any input a,b,c,d (All of them by default are wire)
+output s,t,u,v (all of them by default are wire)
+
+In structural code of writing we route between different modules so the interconnects have to be specifically mentioned as wire. 
+The reg data type is used in two cases (always and initial ) 
+
+always @(a,b)
+y = a&b; // As a changes only when a or b change i.e. it is calculated when a or b changes it maintains the same value for no chnage so it has to hold the previous value so we need to hold the value hence the reg data type.
+
+An input is never a reg, only and output or an intermediate signal can be a reg.
+
+An always block executes forever while the inital block executes only once.
+
+Number Representation 
+1. Decimal - 10'd8 - 0000001000
+2. Hexadecimal - 9'hfe- (15,14)-01111 01110
+3. Binary - 8'b1100 - 00001100
+4. Octal - 7'o67 - 0110111
+
+The default size of a number is 32 bit binary.
+<size><base><number>  
+If the size is given lesser than what the number can be represented, the MSB is truncated according to the size.
+y = 32'habcd_efab - underscores are used for readability 
+
+X = -6'b1_1011 -- 011011 - since the number is negative the value stored is its 2's complement. 100101
+  
+y = 5'b0_1Z0X is a valid number in simulation but not in synthesis.
+6y = 5'bz_1011- zz1011;
+8y = 5'bx_0011; -- xxxx0011;
+
+Bit & Bus 
+
+input x,y x and y are 1 bit values its true for wire declerations
+
+input [3:0] x; //the size of the bus is 4 - x3x2x1x0: the index represent the MSB and LSB. 
+
+Naming Conventions 
+Its a convention to use the same module name as the file name.
+Module name should start with an alphabet - it can contain numbers and underscores 
+eg: half_adder 
+    full_adder_st
+    full_adder_4_bit
+
+
+Operators (gate)
+
+Synthesis 
+
+Bitwise operators 
+1. wire a,b,c;
+   wire [3:0] w,x,y;
+not operator (~) - complement 
+a = ~b;
+x = ~y;
+and operator (&) - Used to mask bits and force reset. 
+c = a&b;
+x = w&y;//4 two input and gates.
+or operator (|) - Used for force set.
+a = b|c;
+w = x|y;
+xor operator (^) - Selective Complementing 
+a = b^c;
+x = w^y;
+xnor operator (~^ or ^~ - usually the earlier is followed) - Matching bits 
+a = b~^c;
+w = x~^y;
+nor gate (~|) - Force a 0 and flip bits.
+a = b~|c;
+w = x~|y;
+nand operator (~&) - Force 1 and flip bits.
+a = b~&c;
+w = x~&y;
+
+Operators Arithematic 
++ addition operator - addition operator is completely synthesisable 
++ c = a+b; 
+{c,s} = a+b; //this is called concatination operator
+y = w+x;
+input [3:0] w,x;
+output [3:0] s;
+output c;
+{c,s} = w+x; -- this single statement is a four bit full adder 
+
+Subtraction (-)
+c = a-b;
+c = a+(-b) 
+as subtraction is addition of two bits one bit and the complement of the other.
+
+* - multiplication (fully synthesisable)
+for multiplication for two 4 bit we need to see that the output is atleast 8 bit.
+
+/ division (Division operator is not completely synthesisable)
+y = w/x;
+if the x i.e. divisor is in the orders of 2^n then it is synthesisable.
+y = 5/2 - it is done by shifiting 5 to the right by one bit.
+So divison by 2^n is a barrel shifter.
+
+% (reminder) - not synthesisable at all
+y = w%x;
+
+Logical Operators 
+Equality (==) - Synthesisable 
+c = (a==b); => C-T if a = b and C-F if a != b;
+Inequality (!=) - Syntheissable 
+c = (a != b)
+
+c=(a===b) = T - the triple equality cannot be synthesised but used generally if either a or b is Z or X.
+
+
+Logical AND(&&)
+c = a&&b; 
+Logical OR (||)
+c = a||b;
+logical not (!)
+b = !a;
+
+
+Relational Operators 
+
+Greater Than (>)
+c = a>b; if a = 1 and b = 0 then C = 1; c = ab'
+c = w>x => w[3].x[3]' + (w[3](~^)x[3]).(w[2].x[2]')
+
+Less Than (<)
+c = a<b;
+
+Greater Than or equal (>=)
+c = a>=b; c = a + b'
+
+Less Than or equal to 
+c = a<=b; => c = a' + b
+
+Reduction Operators 
+- unary operators 
+- buses 
+
+&- Reduction AND - Checks if all bits are 1.
+c = &w; => if w = w3w2w1w0 &w = w3&w2&w1&w0;
+
+| - Reduction OR - checks if all bits are 0.
+c = |w;
+
+^ - Reduction XOR;- Help in parity - even parity 
+c = ^w; 
+
+~& - NAND Operator 
+~| - NOR Operator 
+~^ - XNOR Operator 
+
+c = ~(^w); - odd parity generator 
+
+Shift Operators 
+<< Logical Shift - Unsigned numbers - Combinational Shifter 
+y = w<<2; shifted to the left by two bits 
+y = w<<b;
+
+>> Logical Right Shift 
+y = w<<2; shift to the right by two bits
+
+The logical left and right shift are synthesisable as Barel shifter, w doesn't changed on the shifted value is written into y.
+
+>>> Arithematic right shift - Only used for signed numbers;
+y = w>>>2;
+When we do logical shift for example to the right the MSB bits are given 0's but this would lead to signed number eg: negative number to get a positive value which would be incorrect therefore arithematic shift takes care of this by using the signed bit instead of 0 and keeps the sign of the number intact.
+This is not always sythesisable - not sythesisable in all tools.
+
+y = w<<<2; - Arithematic shift and logical shift are similar and are eqviavlent. So we stick we logical shift as it is sythesisable.
+
+
+
+Concatenation Operator {}
+output [7:0] y;
+input [3:0] w,x;
+w = 4'b1010
+x = 4'b0110
+y = {w,x}
+y = 10100110;
+
+We can put bits together 
+y = {a,c,b}
+if a,c,b are 1 bit each we get and 8 bit output (a=1,b=0,c=1) y= 0000101
+We can also do it by taking parts of the output 
+y = {x,w[1:0],z[3:2]}
+Its fully sythesisable and very useful.
+
+
+Repitation Operator {{}}
+
+{4{a,b}} == abababab
+When we want to buid a pattern or pattern to initialize memory etc;
+It is sythesisable, its usually used in test benches.
+
+
+Conditional Operator (?)
+y = s?x:z;
+if s is T then x is passed on if false z is passed it is like a mux.
+It is a 2x1 MUX.
+s is the select line.
+y = s?a&b:a|b;
+
+y = a>b?a&b:a|b;
+we can have a logic that makes the select line.
+
+
+
+Resoltuion Table 
+We have 4 inputs 0,1,X,Z
+ 
+
+
+
+
+4 - Bit Full Adder _ Structural 
+
+module fa_st(c,s,a,b)
+input [3:0] a,b;
+ 
+
+
+Memories
+Verilog sysnthesis supports synchronous memories 
+In case of asynchronous memory a wrapper has to be placed to implement asycnhronous memory.
+Direct synthesis is possible for D-FF based SRAM. 
+
+reg [7:0] ram; it is a 1 byte ram i.e 8 bits {1x8 matrix} [7:0] -- word size.
+reg ram [7:0] -> 1 bit word (8-1 bit memories) 
+reg ram [7:0] [0:7]  -> 8 rows and 8 columns of 1-bit memory
+reg [7:0] ram [0:3] -> words size is 1 byte = 8 bits and 4 such words. (can access only 1byte at a time)
+reg [3:0] ram[0:3][0:4] 
